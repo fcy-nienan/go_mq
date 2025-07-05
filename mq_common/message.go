@@ -1,4 +1,4 @@
-package message
+package mq_common
 
 import (
 	"sync"
@@ -6,7 +6,7 @@ import (
 )
 
 type Message struct {
-	Id int64
+	Id        int64
 	Body      []byte
 	Timestamp time.Time
 }
@@ -20,16 +20,16 @@ type QueueStore struct {
 	Topics map[string]*Topic
 
 	locks map[string]*sync.Mutex
-	mu sync.Mutex
+	mu    sync.Mutex
 }
 
 type Request struct {
-	Type string `json:"type"`
+	Type  string `json:"type"`
 	Topic string `json:"topic"`
-	Body []byte `json:"body"`
+	Body  []byte `json:"body"`
 }
 type Response struct {
-	Code int `json:"code"`
+	Code int    `json:"code"`
 	Body []byte `json:"body"`
 }
 
@@ -50,7 +50,7 @@ func (qs *QueueStore) getLocker(topic string) *sync.Mutex {
 	return qs.locks[topic]
 }
 
-func (qs *QueueStore) Enqueue(topicName string, message Message){
+func (qs *QueueStore) Enqueue(topicName string, message Message) {
 	locker := qs.getLocker(topicName)
 	locker.Lock()
 	defer locker.Unlock()
