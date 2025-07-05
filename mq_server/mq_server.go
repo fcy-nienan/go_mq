@@ -1,22 +1,22 @@
-package server
+package mq_server
 
 import (
 	"encoding/json"
 	"fmt"
-	"go_mq/message"
+	"mq_common"
 	"net"
 	"time"
 )
 
-var Qs = message.NewQueueStore()
+var Qs = mq_common.NewQueueStore()
 
-func handleConnection(conn net.Conn, qs *message.QueueStore) {
+func handleConnection(conn net.Conn, qs *mq_common.QueueStore) {
 	defer conn.Close()
 
 	fmt.Println("-------处理新客户端----")
 	decoder := json.NewDecoder(conn)
 	encoder := json.NewEncoder(conn)
-	var req message.Request
+	var req mq_common.Request
 	for {
 		err := decoder.Decode(&req)
 		if err != nil {
@@ -24,25 +24,25 @@ func handleConnection(conn net.Conn, qs *message.QueueStore) {
 		}
 		switch req.Type {
 		case "PRODUCER":
-			msg := message.Message{
+			msg := mq_common.Message{
 				Id:        time.Now().UnixNano(),
 				Body:      req.Body,
 				Timestamp: time.Now(),
 			}
 			qs.Enqueue(req.Topic, msg)
-			_ = encoder.Encode(message.Response{Code: 200, Body: []byte("ok")})
+			_ = encoder.Encode(mq_common.Response{Code: 200, Body: []byte("ok")})
 		case "CONSUMER":
 			msg := qs.Dequeue(req.Topic)
 
-			_ = encoder.Encode(message.Response{Code: 200, Body: msg.Body})
+			_ = encoder.Encode(mq_common.Response{Code: 200, Body: msg.Body})
 		default:
-			_ = encoder.Encode(message.Response{Code: 400, Body: []byte("unknown request type")})
+			_ = encoder.Encode(mq_common.Response{Code: 400, Body: []byte("unknown request type")})
 
 		}
 	}
 }
 
-func internalStartServer(address string, qs *message.QueueStore) {
+func internalStartServer(address string, qs *mq_common.QueueStore) {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Println(err)

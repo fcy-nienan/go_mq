@@ -2,21 +2,19 @@ package main
 
 import (
 	"fmt"
-	"go_mq/client"
-	"go_mq/message"
-	"go_mq/server"
-	"strconv"
+	"mq_client"
+	"mq_server"
 	"time"
 )
 
 func main() {
-	go server.StartServer("127.0.0.1:8888")
+	go mq_server.StartServer("127.0.0.1:8888")
 
 	time.Sleep(4 * time.Second)
 
 	for i := 0; i < 100; i++ {
 		go func() {
-			producer := client.Client{Address: "127.0.0.1:8888"}
+			producer := mq_client.Client{Address: "127.0.0.1:8888"}
 			producer.ConnectServer()
 			for i := 0; i < 100; i++ {
 				msgStr := "http://www.baidu.com"
@@ -27,20 +25,20 @@ func main() {
 		}()
 	}
 
-	//go func(){
-	//	consumer := client.Client{Address: "127.0.0.1:8888"}
-	//	consumer.ConnectServer()
-	//	count := 0
-	//	for{
-	//		msg := consumer.Receive("url")
-	//		if msg == nil {
-	//			return
-	//		}
-	//		count++
-	//		fmt.Printf("消费者消费了%d条消息:%s\r\n",count, msg)
-	//		time.Sleep(2 * time.Second)
-	//	}
-	//}()
+	go func() {
+		consumer := mq_client.Client{Address: "127.0.0.1:8888"}
+		consumer.ConnectServer()
+		count := 0
+		for {
+			msg := consumer.Receive("url")
+			if msg == nil {
+				return
+			}
+			count++
+			fmt.Printf("消费者消费了%d条消息:%s\r\n", count, msg)
+			time.Sleep(2 * time.Second)
+		}
+	}()
 
 	time.Sleep(100000 * time.Second)
 }

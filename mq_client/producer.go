@@ -1,4 +1,4 @@
-package client
+package mq_client
 
 import (
 	"fmt"
@@ -7,9 +7,9 @@ import (
 
 func (client *Client) Send(topic string, body []byte) bool {
 	request := message.Request{
-		Type: "PRODUCER",
+		Type:  "PRODUCER",
 		Topic: topic,
-		Body: body,
+		Body:  body,
 	}
 	err := client.encoder.Encode(request)
 	if err != nil {
