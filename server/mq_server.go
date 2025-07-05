@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-
+var Qs = message.NewQueueStore()
 
 func handleConnection(conn net.Conn, qs *message.QueueStore) {
 	defer conn.Close()
@@ -25,8 +25,8 @@ func handleConnection(conn net.Conn, qs *message.QueueStore) {
 		switch req.Type {
 		case "PRODUCER":
 			msg := message.Message{
-				Id: time.Now().UnixNano(),
-				Body: req.Body,
+				Id:        time.Now().UnixNano(),
+				Body:      req.Body,
 				Timestamp: time.Now(),
 			}
 			qs.Enqueue(req.Topic, msg)
@@ -41,8 +41,9 @@ func handleConnection(conn net.Conn, qs *message.QueueStore) {
 		}
 	}
 }
-func StartServer(qs *message.QueueStore) {
-	listener, err := net.Listen("tcp", "127.0.0.1:8888")
+
+func internalStartServer(address string, qs *message.QueueStore) {
+	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("服务启动失败！")
@@ -65,4 +66,8 @@ func StartServer(qs *message.QueueStore) {
 		}
 		go handleConnection(conn, qs)
 	}
+}
+
+func StartServer(address string) {
+	go internalStartServer(address, &Qs)
 }

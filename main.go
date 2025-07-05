@@ -10,25 +10,15 @@ import (
 )
 
 func main() {
-	qs := message.NewQueueStore()
-	go server.StartServer(&qs)
+	go server.StartServer("127.0.0.1:8888")
 
 	time.Sleep(4 * time.Second)
 
-	go func() {
-		for{
-			for key, value := range qs.Topics {
-				fmt.Println(key + "队列剩余" + strconv.Itoa(len(value.Messages)) +"条消息")
-			}
-			time.Sleep(3 * time.Second)
-		}
-	}()
-
-	for i:=0;i<100;i++{
+	for i := 0; i < 100; i++ {
 		go func() {
 			producer := client.Client{Address: "127.0.0.1:8888"}
 			producer.ConnectServer()
-			for i:=0; i< 100; i++ {
+			for i := 0; i < 100; i++ {
 				msgStr := "http://www.baidu.com"
 				producer.Send("url", []byte(msgStr))
 				fmt.Println("生产者发送了一条消息：" + msgStr)
