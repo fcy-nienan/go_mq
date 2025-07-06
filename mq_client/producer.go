@@ -1,7 +1,6 @@
 package mq_client
 
 import (
-	"fmt"
 	"github.com/fcy-nienan/go_mq/mq_common"
 )
 
@@ -13,14 +12,14 @@ func (client *Client) Send(topic string, body []byte) bool {
 	}
 	err := client.encoder.Encode(request)
 	if err != nil {
-		fmt.Println(err)
+		HandleEncodeError(err)
 		return false
 	}
 
 	var resp mq_common.Response
 	err = client.decoder.Decode(&resp)
 	if err != nil {
-		fmt.Println(err)
+		HandleDecodeError(err)
 		return false
 	}
 

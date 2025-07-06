@@ -2,9 +2,14 @@ package mq_client
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/fcy-nienan/go_mq/mq_common"
+	"io"
+	"log"
 	"net"
+	"reflect"
+	"strings"
 )
 
 type Client struct {
@@ -17,12 +22,44 @@ type Client struct {
 func (client *Client) ConnectServer() {
 	conn, err := net.Dial("tcp", client.Address)
 	if err != nil {
+		fmt.Println("客户端连接服务器成功！")
 		fmt.Println(err)
 		return
 	}
 	client.conn = conn
 	client.encoder = json.NewEncoder(client.conn)
 	client.decoder = json.NewDecoder(client.conn)
+}
+func HandleDecodeError(err error) {
+	switch {
+	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		log.Printf("Client: Connection closed or incomplete data: %v", err)
+	case strings.Contains(err.Error(), "connection reset by peer"):
+		log.Printf("Client: Connection reset by peer: %v", err)
+	default:
+		log.Printf("Client: Decode error: %v", err)
+	}
+}
+func HandleEncodeError(err error) {
+	switch {
+	case errors.Is(err, io.EOF):
+		log.Println("Client: Peer closed the connection")
+	case errors.Is(err, io.ErrClosedPipe):
+		log.Println("Client: Write to closed pipe")
+	case strings.Contains(err.Error(), "connection reset by peer"):
+		log.Println("Client: Connection reset by peer")
+	case strings.Contains(err.Error(), "use of closed network connection"):
+		log.Println("Client: Attempted write on closed connection")
+	case strings.Contains(reflect.TypeOf(err).String(), "MarshalerError"):
+		log.Printf("Client: Marshal error: %v", err)
+	case strings.Contains(reflect.TypeOf(err).String(), "UnsupportedTypeError"):
+		log.Printf("Client: Unsupported type in encode: %v", err)
+	default:
+		var netErr net.Error
+		if errors.As(err, &netErr) && netErr.Timeout() {
+			log.Println("Client: Write timeout:", err)
+		}
+	}
 }
 func (client *Client) Receive(topic string) []byte {
 	req := mq_common.Request{
@@ -32,13 +69,14 @@ func (client *Client) Receive(topic string) []byte {
 
 	err := client.encoder.Encode(req)
 	if err != nil {
-		panic(err)
+		HandleDecodeError(err)
+		return nil
 	}
 
 	var resp mq_common.Response
 	err = client.decoder.Decode(&resp)
 	if err != nil {
-		fmt.Println(err)
+		HandleEncodeError(err)
 		return nil
 	}
 	if resp.Code == 200 {
